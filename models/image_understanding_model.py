@@ -26,25 +26,22 @@ class ImageUnderstandingModel:
         return self.key_set
 
     def ask_image_question(self, prompt, filepath):
-        output = replicate.run(
+        return replicate.run(
             "andreasjansson/blip-2:4b32258c42e9efd4288bb9910bc532a69727f9acd26aa08e175713a0a857a608",
             input={"image": open(filepath, "rb"), "question": prompt},
         )
-        return output
 
     def get_image_caption(self, filepath):
-        output = replicate.run(
+        return replicate.run(
             "andreasjansson/blip-2:4b32258c42e9efd4288bb9910bc532a69727f9acd26aa08e175713a0a857a608",
             input={"image": open(filepath, "rb"), "caption": True},
         )
-        return output
 
     def get_image_stylistic_caption(self, filepath):
-        output = replicate.run(
+        return replicate.run(
             "pharmapsychotic/clip-interrogator:a4a8bafd6089e1716b06057c42b19378250d008b80fe87caa5cd36d40c1eda90",
             input={"image": open(filepath, "rb")},
         )
-        return output
 
     async def do_image_ocr(self, filepath):
         # Read the image file and encode it in base64 format
@@ -72,24 +69,17 @@ class ImageUnderstandingModel:
         # Send the async request
         async with aiohttp.ClientSession() as session:
             async with session.post(
-                url, headers=header, data=json.dumps(payload)
-            ) as response:
+                        url, headers=header, data=json.dumps(payload)
+                    ) as response:
                 result = await response.json()
 
-                if response.status == 200:
-                    # Get fullTextAnnotation
-                    full_text_annotation = result.get("responses", [])[0].get(
-                        "fullTextAnnotation"
-                    )
-
-                    if full_text_annotation:
-                        extracted_text = full_text_annotation.get("text")
-
-                        # Return the extracted text
-                        return extracted_text
-                    else:
-                        return ""
-                else:
+                if response.status != 200:
                     raise Exception(
                         f"Google Cloud Vision API returned an error. Status code: {response.status}, Error: {result}"
                     )
+                if full_text_annotation := result.get("responses", [])[0].get(
+                    "fullTextAnnotation"
+                ):
+                    return full_text_annotation.get("text")
+                else:
+                    return ""

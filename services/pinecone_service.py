@@ -9,10 +9,9 @@ class PineconeService:
         self.index.upsert([(text, embeddings)])
 
     def get_all_for_conversation(self, conversation_id: int):
-        response = self.index.query(
+        return self.index.query(
             top_k=100, filter={"conversation_id": conversation_id}
         )
-        return response
 
     async def upsert_conversation_embedding(
         self, model, conversation_id: int, text, timestamp, custom_api_key=None

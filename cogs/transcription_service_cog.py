@@ -184,14 +184,13 @@ class TranscribeService(discord.Cog, name="TranscribeService"):
                 # Chunk the response into 2048 character chunks, each an embed page
                 chunks = [response[i : i + 2048] for i in range(0, len(response), 2048)]
                 embed_pages = []
-                for chunk in chunks:
-                    embed_pages.append(
-                        discord.Embed(
-                            title="Transcription Page {}".format(len(embed_pages) + 1),
-                            description=chunk,
-                        )
+                embed_pages.extend(
+                    discord.Embed(
+                        title=f"Transcription Page {len(embed_pages) + 1}",
+                        description=chunk,
                     )
-
+                    for chunk in chunks
+                )
                 paginator = pages.Paginator(
                     pages=embed_pages,
                     timeout=None,
