@@ -540,7 +540,7 @@ class Index_handler:
                     embedding_model = OpenAIEmbedding()
                     token_counter = TokenCountingHandler(
                         tokenizer=tiktoken.encoding_for_model(
-                            "text-davinci-003"
+                            "gpt-3.5-turbo-instruct"
                         ).encode,
                         verbose=False,
                     )
@@ -591,7 +591,7 @@ class Index_handler:
         try:
             embedding_model = OpenAIEmbedding()
             token_counter = TokenCountingHandler(
-                tokenizer=tiktoken.encoding_for_model("text-davinci-003").encode,
+                tokenizer=tiktoken.encoding_for_model("gpt-3.5-turbo-instruct").encode,
                 verbose=False,
             )
             callback_manager = CallbackManager([token_counter])
@@ -684,7 +684,7 @@ class Index_handler:
         try:
             embedding_model = OpenAIEmbedding()
             token_counter = TokenCountingHandler(
-                tokenizer=tiktoken.encoding_for_model("text-davinci-003").encode,
+                tokenizer=tiktoken.encoding_for_model("gpt-3.5-turbo-instruct").encode,
                 verbose=False,
             )
             callback_manager = CallbackManager([token_counter])
@@ -779,7 +779,7 @@ class Index_handler:
             )
             embedding_model = OpenAIEmbedding()
             token_counter = TokenCountingHandler(
-                tokenizer=tiktoken.encoding_for_model("text-davinci-003").encode,
+                tokenizer=tiktoken.encoding_for_model("gpt-3.5-turbo-instruct").encode,
                 verbose=False,
             )
             callback_manager = CallbackManager([token_counter])
@@ -892,7 +892,7 @@ class Index_handler:
             embedding_model_mock = MockEmbedding(1536)
 
             token_counter_mock = TokenCountingHandler(
-                tokenizer=tiktoken.encoding_for_model("text-davinci-003").encode,
+                tokenizer=tiktoken.encoding_for_model("gpt-3.5-turbo-instruct").encode,
                 verbose=False,
             )
 
@@ -1033,7 +1033,7 @@ class Index_handler:
             )
             embedding_model = OpenAIEmbedding()
             token_counter = TokenCountingHandler(
-                tokenizer=tiktoken.encoding_for_model("text-davinci-003").encode,
+                tokenizer=tiktoken.encoding_for_model("gpt-3.5-turbo-instruct").encode,
                 verbose=False,
             )
             callback_manager = CallbackManager([token_counter])

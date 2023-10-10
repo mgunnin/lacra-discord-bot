@@ -34,7 +34,7 @@ class UsageService:
         "gpt-3.5-turbo-16k": "turbo-16",
         "gpt-3.5-turbo-0613": "turbo",
         "gpt-3.5-turbo-16k-0613": "turbo",
-        "text-davinci-003": "davinci",
+        "gpt-3.5-turbo-instruct": "davinci",
         "text-curie-001": "curie",
     }
 

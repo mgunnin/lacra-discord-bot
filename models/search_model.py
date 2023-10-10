@@ -236,7 +236,7 @@ class Search:
                 max_tokens=50,
                 temperature=0.4,
                 presence_penalty=0.65,
-                model_name="text-davinci-003",
+                model_name="gpt-3.5-turbo-instruct",
             )
 
             # Refine a query to send to google custom search API
