@@ -1101,7 +1101,7 @@ class GPT3ComCon(discord.Cog, name="GPT3ComCon"):
 
         if private:
             await ctx.defer(ephemeral=True)
-        elif not private:
+        else:
             await ctx.defer()
 
         # Check the opener for bad content.
@@ -1116,7 +1116,6 @@ class GPT3ComCon(discord.Cog, name="GPT3ComCon"):
                     name=embed_title,
                     auto_archive_duration=60,
                 )
-                target = thread
             else:
                 embed_title = f"{user.name}'s conversation with GPT"
                 message_embed = discord.Embed(
@@ -1135,11 +1134,11 @@ class GPT3ComCon(discord.Cog, name="GPT3ComCon"):
                 )
                 message_thread = await ctx.send(embed=message_embed)
                 thread = await message_thread.create_thread(
-                    name=user.name + "'s conversation with GPT",
+                    name=f"{user.name}'s conversation with GPT",
                     auto_archive_duration=60,
                 )
                 await ctx.respond("Conversation started.")
-                target = thread
+            target = thread
         else:
             # Check if this current channel is already in a conversation
             if ctx.channel.id in self.conversation_threads:
@@ -1151,8 +1150,9 @@ class GPT3ComCon(discord.Cog, name="GPT3ComCon"):
             # Check if the user is permitted to start a conversation in full channels
             # check if any of the user role names match CHANNEL_CHAT_ROLES
             if CHANNEL_CHAT_ROLES and CHANNEL_CHAT_ROLES != [None]:
-                if not any(
-                    role.name.lower() in CHANNEL_CHAT_ROLES for role in ctx.user.roles
+                if all(
+                    role.name.lower() not in CHANNEL_CHAT_ROLES
+                    for role in ctx.user.roles
                 ):
                     await ctx.respond(
                         "You are not permitted to start a conversation in this channel."
@@ -1178,10 +1178,7 @@ class GPT3ComCon(discord.Cog, name="GPT3ComCon"):
             temperature, top_p, frequency_penalty, presence_penalty
         )
 
-        if opener or opener_file:
-            user_id_normalized = ctx.author.id
-        else:
-            user_id_normalized = user.id
+        user_id_normalized = ctx.author.id if opener or opener_file else user.id
         if opener_file:
             if not opener_file.endswith((".txt", ".json")):
                 opener_file = (
@@ -1215,10 +1212,7 @@ class GPT3ComCon(discord.Cog, name="GPT3ComCon"):
                                 opener_file.get("text", "error getting text") + opener
                             )
                     except Exception:  # Parse as just regular text
-                        if not opener:
-                            opener = opener_file
-                        else:
-                            opener = opener_file + opener
+                        opener = opener_file if not opener else opener_file + opener
                 except Exception:
                     opener_file = (
                         None  # Just start a regular thread if the file fails to load
@@ -1229,7 +1223,7 @@ class GPT3ComCon(discord.Cog, name="GPT3ComCon"):
             self.conversation_threads[target.id].history.append(
                 EmbeddedConversationItem(self.CONVERSATION_STARTER_TEXT_MINIMAL, 0)
             )
-        elif not minimal:
+        else:
             self.conversation_threads[target.id].history.append(
                 EmbeddedConversationItem(self.CONVERSATION_STARTER_TEXT, 0)
             )
@@ -1330,12 +1324,7 @@ class GPT3ComCon(discord.Cog, name="GPT3ComCon"):
             return
 
         # If only one of the options are set, then this is invalid.
-        if (
-            parameter is None
-            and value is not None
-            or parameter is not None
-            and value is None
-        ):
+        if parameter is None or value is None:
             await ctx.respond(
                 "Invalid settings command. Please use `/settings <parameter> <value>` to change a setting"
             )
@@ -1375,7 +1364,7 @@ class GPT3ComCon(discord.Cog, name="GPT3ComCon"):
         tokens = self.model.usage_service.count_tokens(prompt)
         if tokens > self.model.max_tokens - 1000:
             await ctx.respond(
-                f"This message is too long to paraphrase.",
+                "This message is too long to paraphrase.",
                 ephemeral=True,
                 delete_after=10,
             )
@@ -1399,7 +1388,7 @@ class GPT3ComCon(discord.Cog, name="GPT3ComCon"):
         tokens = self.model.usage_service.count_tokens(prompt)
         if tokens > self.model.max_tokens - 500:
             await ctx.respond(
-                f"This message is too long to elaborate on.",
+                "This message is too long to elaborate on.",
                 ephemeral=True,
                 delete_after=10,
             )
@@ -1416,7 +1405,7 @@ class GPT3ComCon(discord.Cog, name="GPT3ComCon"):
         user = ctx.user
         prompt = await self.mention_to_username(ctx, message.content)
         from_other_action = (
-            "Message at message link: " + message.jump_url + "\nSummarized:"
+            f"Message at message link: {message.jump_url}" + "\nSummarized:"
         )
 
         # Construct the paraphrase prompt
@@ -1481,7 +1470,7 @@ class ShareButton(discord.ui.Button["ShareView"]):
             traceback.print_exc()
             await interaction.response.send_message(
                 embed=EmbedStatics.get_conversation_share_failed_embed(
-                    "The ShareGPT API returned an error: " + str(e)
+                    f"The ShareGPT API returned an error: {str(e)}"
                 ),
                 ephemeral=True,
                 delete_after=15,
