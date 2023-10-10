@@ -17,8 +17,7 @@ from models.index_model import Index_handler
 USER_INPUT_API_KEYS = EnvService.get_user_input_api_keys()
 USER_KEY_DB = EnvService.get_api_db()
 PRE_MODERATE = EnvService.get_premoderate()
-GITHUB_TOKEN = EnvService.get_github_token()
-if GITHUB_TOKEN:
+if GITHUB_TOKEN := EnvService.get_github_token():
     os.environ["GITHUB_TOKEN"] = GITHUB_TOKEN
 
 
@@ -211,8 +210,6 @@ class IndexService(discord.Cog, name="IndexService"):
     async def index_chat_command(self, ctx, model):
         await self.index_handler.start_index_chat(ctx, model)
 
-        pass
-
     async def rename_user_index_command(self, ctx, user_index, new_name):
         """Command handler to rename a user index"""
 
@@ -355,7 +352,7 @@ class IndexService(discord.Cog, name="IndexService"):
             await self.index_handler.set_file_index(
                 ctx, file, user_api_key=user_api_key
             )
-        elif link:
+        else:
             await self.index_handler.set_link_index(
                 ctx, link, user_api_key=user_api_key
             )

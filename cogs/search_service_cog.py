@@ -91,8 +91,6 @@ def my_parse(self, text):
         # This will cause the bot to respond with the text as if it were a final answer.
         if "action_input" not in text_without_triple_backticks:
             text_without_triple_backticks = f'{{"action": "Final Answer", "action_input": {json.dumps(text_without_triple_backticks)}}}'
-            result = original_parse(self, text_without_triple_backticks)
-
         else:
             # Insert "```json" before the opening curly brace
             text_without_triple_backticks = re.sub(
@@ -104,7 +102,7 @@ def my_parse(self, text):
                 r"(})", r"\1 ```", text_without_triple_backticks
             )
 
-            result = original_parse(self, text_without_triple_backticks)
+        result = original_parse(self, text_without_triple_backticks)
 
     return result
 
@@ -243,9 +241,7 @@ class CustomTextRequestWrapper(BaseModel):
                 query_engine = RetrieverQueryEngine(
                     retriever=retriever, response_synthesizer=response_synthesizer
                 )
-                response_text = query_engine.query(original_query)
-                return response_text
-
+                return query_engine.query(original_query)
         return text
 
 
@@ -342,7 +338,6 @@ class SearchService(discord.Cog, name="SearchService"):
             await self.converser_cog.deletion_queue.put(original_deletion_message)
             return
 
-        # Pre moderation
         if PRE_MODERATE:
             if await Moderation.simple_moderate_and_respond(message.content, message):
                 await message.delete()
@@ -416,7 +411,7 @@ class SearchService(discord.Cog, name="SearchService"):
                     description=response,
                     color=0x808080,
                 )
-                if len(used_tools) > 0:
+                if used_tools:
                     response_embed.set_footer(
                         text="Used tools: " + ", ".join(used_tools)
                     )
@@ -439,11 +434,11 @@ class SearchService(discord.Cog, name="SearchService"):
         )
         message_thread = await ctx.send(embed=message_embed)
         thread = await message_thread.create_thread(
-            name=ctx.user.name + "'s internet-connected conversation with GPT",
+            name=f"{ctx.user.name}'s internet-connected conversation with GPT",
             auto_archive_duration=60,
         )
         await ctx.respond("Conversation started.")
-        print("The search scope is " + str(search_scope) + ".")
+        print(f"The search scope is {str(search_scope)}.")
 
         # Make a new agent for this user to chat.
         search = GoogleSearchAPIWrapper(
@@ -528,7 +523,6 @@ class SearchService(discord.Cog, name="SearchService"):
         """Command handler for the search command"""
         await ctx.defer() if not redo else None
 
-        # Check the opener for bad content.
         if PRE_MODERATE:
             if await Moderation.simple_moderate_and_respond(query, ctx):
                 return
@@ -547,8 +541,8 @@ class SearchService(discord.Cog, name="SearchService"):
         ):
             await ctx.respond(
                 embed=EmbedStatics.get_search_failure_embed(
-                    str("The search service is not enabled on this server.")
-                ),
+                    "The search service is not enabled on this server."
+                )
             )
             return
 

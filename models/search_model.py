@@ -148,22 +148,20 @@ class Search:
         return embed
 
     def index_webpage(self, url) -> list[Document]:
-        documents = BeautifulSoupWebReader(
+        return BeautifulSoupWebReader(
             website_extractor=DEFAULT_WEBSITE_EXTRACTOR
         ).load_data(urls=[url])
-        return documents
 
     async def index_pdf(self, url) -> list[Document]:
         # Download the PDF at the url and save it to a tempfile
         async with aiohttp.ClientSession() as session:
             async with session.get(url) as response:
-                if response.status == 200:
-                    data = await response.read()
-                    f = tempfile.NamedTemporaryFile(suffix=".pdf", delete=False)
-                    f.write(data)
-                    f.close()
-                else:
+                if response.status != 200:
                     raise ValueError("Could not download PDF")
+                data = await response.read()
+                f = tempfile.NamedTemporaryFile(suffix=".pdf", delete=False)
+                f.write(data)
+                f.close()
         # Get the file path of this tempfile.NamedTemporaryFile
         # Save this temp file to an actual file that we can put into something else to read it
         documents = SimpleDirectoryReader(input_files=[f.name]).load_data()
@@ -177,36 +175,30 @@ class Search:
         """Search the web for a query"""
         async with aiohttp.ClientSession() as session:
             async with session.get(
-                f"https://www.googleapis.com/customsearch/v1?key={self.google_search_api_key}&cx={self.google_search_engine_id}&q={query}"
-            ) as response:
-                if response.status == 200:
-                    data = await response.json()
-                    # Return a list of the top 2 links
-                    return (
-                        [item["link"] for item in data["items"][:search_scope]],
-                        [item["link"] for item in data["items"]],
-                    )
-                else:
+                        f"https://www.googleapis.com/customsearch/v1?key={self.google_search_api_key}&cx={self.google_search_engine_id}&q={query}"
+                    ) as response:
+                if response.status != 200:
                     raise ValueError(
-                        "Error while retrieving links, the response returned "
-                        + str(response.status)
-                        + " with the message "
-                        + str(await response.text())
+                        f"Error while retrieving links, the response returned {str(response.status)} with the message {str(await response.text())}"
                     )
+                data = await response.json()
+                # Return a list of the top 2 links
+                return (
+                    [item["link"] for item in data["items"][:search_scope]],
+                    [item["link"] for item in data["items"]],
+                )
 
     async def try_edit(self, message, embed):
         try:
             await message.edit(embed=embed)
         except Exception:
             traceback.print_exc()
-            pass
 
     async def try_delete(self, message):
         try:
             await message.delete()
         except Exception:
             traceback.print_exc()
-            pass
 
     async def search(
         self,

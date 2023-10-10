@@ -69,7 +69,7 @@ class ModerationsService(discord.Cog, name="ModerationsService"):
     def get_or_set_warn_set(self, guild_id):
         """Get warn_set set for the guild, if not set them from default values"""
         guild_id = str(guild_id)
-        key = guild_id + "_warn_set"
+        key = f"{guild_id}_warn_set"
         if key not in MOD_DB:
             MOD_DB[key] = zip(
                 self.default_warn_set.keys, self.default_warn_set.thresholds
@@ -80,7 +80,7 @@ class ModerationsService(discord.Cog, name="ModerationsService"):
     def get_or_set_delete_set(self, guild_id):
         """Get delete_set set for the guild, if not set them from default values"""
         guild_id = str(guild_id)
-        key = guild_id + "_delete_set"
+        key = f"{guild_id}_delete_set"
         if key not in MOD_DB:
             MOD_DB[key] = zip(
                 self.default_delete_set.keys, self.default_delete_set.thresholds
@@ -91,14 +91,14 @@ class ModerationsService(discord.Cog, name="ModerationsService"):
     def set_warn_set(self, guild_id, threshold_set):
         """Set threshold for warning a message"""
         guild_id = str(guild_id)
-        key = guild_id + "_warn_set"
+        key = f"{guild_id}_warn_set"
         MOD_DB[key] = zip(threshold_set.keys, threshold_set.thresholds)
         MOD_DB.commit()
 
     def set_delete_set(self, guild_id, threshold_set):
         """Set threshold for deleting a message"""
         guild_id = str(guild_id)
-        key = guild_id + "_delete_set"
+        key = f"{guild_id}_delete_set"
         MOD_DB[key] = zip(threshold_set.keys, threshold_set.thresholds)
         MOD_DB.commit()
 
@@ -139,7 +139,7 @@ class ModerationsService(discord.Cog, name="ModerationsService"):
                     delete_set,
                 )
             )
-            print("Launched the moderations service for guild " + str(guild_id))
+            print(f"Launched the moderations service for guild {str(guild_id)}")
             Moderation.moderations_launched.append(guild_id)
             return moderations_channel
 
@@ -159,7 +159,13 @@ class ModerationsService(discord.Cog, name="ModerationsService"):
             alert_channel = discord.utils.get(ctx.guild.channels, name=alert_channel_id)
             alert_channel_id = alert_channel.id
 
-        if status == "on":
+        if status == "off":
+            # Cancel the moderations service.
+            await self.stop_moderations_service(ctx.guild_id)
+            await ctx.respond(
+                "Moderations is now disabled for this guild", ephemeral=True
+            )
+        elif status == "on":
             # Check if the current guild is already in the database and if so, if the moderations is on
             if self.check_guild_moderated(ctx.guild_id):
                 await ctx.respond("Moderations is already enabled for this guild")
@@ -170,13 +176,6 @@ class ModerationsService(discord.Cog, name="ModerationsService"):
                 guild_id=ctx.guild_id, alert_channel_id=alert_channel_id
             )
             await ctx.respond("Moderations is now enabled for this guild")
-
-        elif status == "off":
-            # Cancel the moderations service.
-            await self.stop_moderations_service(ctx.guild_id)
-            await ctx.respond(
-                "Moderations is now disabled for this guild", ephemeral=True
-            )
 
     async def stop_moderations_service(self, guild_id):
         """Remove guild moderation status and stop the service"""
