@@ -49,7 +49,7 @@ class Override:
 
 class Models:
     # Text models
-    DAVINCI = "text-davinci-003"
+    DAVINCI = "gpt-3.5-turbo-instruct"
     CURIE = "text-curie-001"
 
     # Embedding models

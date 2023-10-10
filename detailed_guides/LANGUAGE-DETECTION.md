@@ -4,4 +4,4 @@ Using GPT, this bot can force everybody on your server to speak English. Simply 
 
 This feature is in beta and may be buggy, so we're looking for your feedback on it to help us improve.
 
-This feature currently using `text-davinci-003`, so this is certainly an expensive feature to run if you have a lot of people in your server. Be careful.
+This feature currently using `gpt-3.5-turbo-instruct`, so this is certainly an expensive feature to run if you have a lot of people in your server. Be careful.
