@@ -11,45 +11,41 @@ class EmbedStatics:
 
     @staticmethod
     def get_api_timeout_embed():
-        embed = discord.Embed(
+        return discord.Embed(
             title="The API timed out. Try again later.",
-            description=f"*This is an issue with the OpenAI APIs, not with the bot instance.*",
+            description="*This is an issue with the OpenAI APIs, not with the bot instance.*",
             color=discord.Color.red(),
         )
-        return embed
 
     @staticmethod
     def get_invalid_api_response_embed(e):
-        embed = discord.Embed(
+        return discord.Embed(
             title="The API returned an invalid response",
             description=f"**{e.status}: {e.message}**",
             color=discord.Color.red(),
         )
-        return embed
 
     @staticmethod
     def get_invalid_value_embed(e):
-        embed = discord.Embed(
+        return discord.Embed(
             title="Invalid value",
             description=f"**{str(e)}**",
             color=discord.Color.red(),
         )
-        return embed
 
     @staticmethod
     def get_general_error_embed(e):
-        embed = discord.Embed(
+        return discord.Embed(
             title="An error occurred",
             description=f"**{str(e)}**",
             color=discord.Color.red(),
         )
-        return embed
 
     @staticmethod
     def generate_end_embed():
         embed = discord.Embed(
             title="Conversation Ended",
-            description=f"This conversation has ended. You can start a new one with `/gpt converse`",
+            description="This conversation has ended. You can start a new one with `/gpt converse`",
             color=0x808080,
         )
         embed.set_thumbnail(url="https://i.imgur.com/asA13vI.png")
@@ -88,12 +84,11 @@ class EmbedStatics:
 
     @staticmethod
     def generate_opener_embed(opener):
-        embed = discord.Embed(
+        return discord.Embed(
             title="Opening Prompt",
             description=f"{opener}",
             color=0x808080,
         )
-        return embed
 
     @staticmethod
     def get_index_set_success_embed(price="Unknown"):
@@ -175,7 +170,7 @@ class EmbedStatics:
     def get_index_compose_progress_embed():
         embed = discord.Embed(
             title="Index Compose",
-            description=f"Your index composition is running, this may take a while.",
+            description="Your index composition is running, this may take a while.",
             color=discord.Color.blurple(),
         )
         # thumbnail of https://i.imgur.com/hbdBZfG.png
@@ -186,7 +181,7 @@ class EmbedStatics:
     def get_index_chat_preparation_message():
         embed = discord.Embed(
             title="Index Chat",
-            description=f"Your index chat is preparing, this might take a moment.",
+            description="Your index chat is preparing, this might take a moment.",
             color=discord.Color.blurple(),
         )
         # thumbnail of https://i.imgur.com/hbdBZfG.png
@@ -196,7 +191,7 @@ class EmbedStatics:
     @staticmethod
     def get_index_rename_success_embed(original, renamed):
         embed = discord.Embed(
-            title=f"Index Rename",
+            title="Index Rename",
             description=f"Index {original} renamed to {renamed}",
             color=discord.Color.green(),
         )
@@ -217,12 +212,11 @@ class EmbedStatics:
 
     @staticmethod
     def get_edit_command_output_embed(response_text):
-        embed = discord.Embed(
+        return discord.Embed(
             title="GPT Edits",
             description=f"{response_text}",
             color=discord.Color.light_grey(),
         )
-        return embed
 
     @staticmethod
     def get_search_failure_embed(message):
@@ -250,7 +244,7 @@ class EmbedStatics:
     def get_search_redo_progress_embed():
         embed = discord.Embed(
             title="AI-Assisted Search",
-            description=f"Your original search request is being redone. This may take a while.",
+            description="Your original search request is being redone. This may take a while.",
             color=discord.Color.blurple(),
         )
         # thumbnail of https://i.imgur.com/hbdBZfG.png
@@ -272,7 +266,7 @@ class EmbedStatics:
     def get_conversation_share_failed_embed(message):
         embed = discord.Embed(
             title="Conversation Sharing",
-            description=f"Conversation sharing failed: " + message,
+            description=f"Conversation sharing failed: {message}",
             color=discord.Color.red(),
         )
         # thumbnail of https://i.imgur.com/hbdBZfG.png
@@ -314,7 +308,7 @@ class EmbedStatics:
     def build_transcribe_progress_embed():
         embed = discord.Embed(
             title="Transcriber",
-            description=f"Your transcription request has been sent, this may take a while.",
+            description="Your transcription request has been sent, this may take a while.",
             color=discord.Color.blurple(),
         )
         embed.set_thumbnail(url="https://i.imgur.com/txHhNzL.png")
@@ -335,7 +329,7 @@ class EmbedStatics:
     def build_transcribe_failed_embed(message):
         embed = discord.Embed(
             title="Transcriber",
-            description=f"Transcription failed: " + message,
+            description=f"Transcription failed: {message}",
             color=discord.Color.red(),
         )
         embed.set_thumbnail(url="https://i.imgur.com/hbdBZfG.png")
