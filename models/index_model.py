@@ -23,6 +23,7 @@ from langchain.chat_models import ChatOpenAI
 from langchain.llms import OpenAIChat
 from langchain.memory import ConversationBufferMemory
 from llama_index.callbacks import CallbackManager, TokenCountingHandler
+from llama_index.node_parser import SimpleNodeParser
 from llama_index.schema import NodeRelationship
 from llama_index.indices.query.query_transform import StepDecomposeQueryTransform
 from llama_index.langchain_helpers.agents import (
@@ -30,7 +31,6 @@ from llama_index.langchain_helpers.agents import (
     LlamaToolkit,
     create_llama_chat_agent,
 )
-from llama_index.optimization import SentenceEmbeddingOptimizer
 from llama_index.prompts.chat_prompts import CHAT_REFINE_PROMPT
 
 from llama_index.readers import YoutubeTranscriptReader
@@ -55,8 +55,8 @@ from llama_index import (
     LLMPredictor,
     ServiceContext,
     StorageContext,
-    ResponseSynthesizer,
     load_index_from_storage,
+    get_response_synthesizer,
 )
 
 from llama_index.schema import TextNode
@@ -76,6 +76,21 @@ EpubReader = download_loader("EpubReader")
 MarkdownReader = download_loader("MarkdownReader")
 RemoteReader = download_loader("RemoteReader")
 RemoteDepthReader = download_loader("RemoteDepthReader")
+
+embedding_model = OpenAIEmbedding()
+token_counter = TokenCountingHandler(
+    tokenizer=tiktoken.encoding_for_model("text-davinci-003").encode,
+    verbose=False,
+)
+node_parser = SimpleNodeParser.from_defaults(
+    text_splitter=TokenTextSplitter(chunk_size=256, chunk_overlap=20)
+)
+callback_manager = CallbackManager([token_counter])
+service_context = ServiceContext.from_defaults(
+    embed_model=embedding_model,
+    callback_manager=callback_manager,
+    node_parser=node_parser,
+)
 
 
 def get_and_query(
@@ -103,11 +118,10 @@ def get_and_query(
             index=index, similarity_top_k=nodes, service_context=service_context
         )
 
-    response_synthesizer = ResponseSynthesizer.from_args(
+    response_synthesizer = get_response_synthesizer(
         response_mode=response_mode,
         use_async=True,
         refine_template=CHAT_REFINE_PROMPT,
-        optimizer=SentenceEmbeddingOptimizer(threshold_cutoff=0.7),
         service_context=service_context,
     )
 
@@ -192,18 +206,39 @@ class IndexData:
         try:
             # First, clear all the files inside it
             for file in os.listdir(EnvService.find_shared_file(f"indexes/{user_id}")):
-                os.remove(EnvService.find_shared_file(f"indexes/{user_id}/{file}"))
+                try:
+                    os.remove(EnvService.find_shared_file(f"indexes/{user_id}/{file}"))
+                except:
+                    traceback.print_exc()
             for file in os.listdir(
                 EnvService.find_shared_file(f"indexes/{user_id}_search")
             ):
-                os.remove(
-                    EnvService.find_shared_file(f"indexes/{user_id}_search/{file}")
-                )
+                try:
+                    os.remove(
+                        EnvService.find_shared_file(f"indexes/{user_id}_search/{file}")
+                    )
+                except:
+                    traceback.print_exc()
         except Exception:
             traceback.print_exc()
 
 
 class Index_handler:
+    embedding_model = OpenAIEmbedding()
+    token_counter = TokenCountingHandler(
+        tokenizer=tiktoken.encoding_for_model("text-davinci-003").encode,
+        verbose=False,
+    )
+    node_parser = SimpleNodeParser.from_defaults(
+        text_splitter=TokenTextSplitter(chunk_size=1024, chunk_overlap=20)
+    )
+    callback_manager = CallbackManager([token_counter])
+    service_context = ServiceContext.from_defaults(
+        embed_model=embedding_model,
+        callback_manager=callback_manager,
+        node_parser=node_parser,
+    )
+
     def __init__(self, bot, usage_service):
         self.bot = bot
         self.openai_key = os.getenv("OPENAI_TOKEN")
@@ -437,18 +472,21 @@ class Index_handler:
                             "Invalid URL or could not connect to the provided URL."
                         )
                         # Detect if the link is a PDF, if it is, we load it differently
-                    if response.headers["Content-Type"] == "application/pdf":
-                        documents = await self.index_pdf(url)
-                        return await self.loop.run_in_executor(
-                            None,
-                            functools.partial(
-                                GPTVectorStoreIndex,
-                                documents=documents,
-                                service_context=service_context,
-                                use_async=True,
-                            ),
-                        )
+                        if response.headers["Content-Type"] == "application/pdf":
+                            documents = await self.index_pdf(url)
+                            index = await self.loop.run_in_executor(
+                                None,
+                                functools.partial(
+                                    GPTVectorStoreIndex.from_documents,
+                                    documents=documents,
+                                    service_context=service_context,
+                                    use_async=True,
+                                ),
+                            )
+
+                            return index
         except:
+            traceback.print_exc()
             raise ValueError("Could not load webpage")
 
         documents = BeautifulSoupWebReader(
@@ -537,17 +575,6 @@ class Index_handler:
                     suffix=suffix, dir=temp_path, delete=False
                 ) as temp_file:
                     await file.save(temp_file.name)
-                    embedding_model = OpenAIEmbedding()
-                    token_counter = TokenCountingHandler(
-                        tokenizer=tiktoken.encoding_for_model(
-                            "gpt-3.5-turbo-instruct"
-                        ).encode,
-                        verbose=False,
-                    )
-                    callback_manager = CallbackManager([token_counter])
-                    service_context = ServiceContext.from_defaults(
-                        embed_model=embedding_model, callback_manager=callback_manager
-                    )
                     index = await self.loop.run_in_executor(
                         None,
                         partial(
@@ -589,16 +616,6 @@ class Index_handler:
 
         response = await ctx.respond(embed=EmbedStatics.build_index_progress_embed())
         try:
-            embedding_model = OpenAIEmbedding()
-            token_counter = TokenCountingHandler(
-                tokenizer=tiktoken.encoding_for_model("gpt-3.5-turbo-instruct").encode,
-                verbose=False,
-            )
-            callback_manager = CallbackManager([token_counter])
-            service_context = ServiceContext.from_defaults(
-                embed_model=embedding_model, callback_manager=callback_manager
-            )
-
             # Pre-emptively connect and get the content-type of the response
             try:
                 async with aiohttp.ClientSession() as session:
@@ -682,16 +699,6 @@ class Index_handler:
 
         response = await ctx.respond(embed=EmbedStatics.build_index_progress_embed())
         try:
-            embedding_model = OpenAIEmbedding()
-            token_counter = TokenCountingHandler(
-                tokenizer=tiktoken.encoding_for_model("gpt-3.5-turbo-instruct").encode,
-                verbose=False,
-            )
-            callback_manager = CallbackManager([token_counter])
-            service_context = ServiceContext.from_defaults(
-                embed_model=embedding_model, callback_manager=callback_manager
-            )
-
             # Pre-emptively connect and get the content-type of the response
             try:
                 async with aiohttp.ClientSession() as session:
@@ -776,15 +783,6 @@ class Index_handler:
         try:
             document = await self.load_data(
                 channel_ids=[channel.id], limit=message_limit, oldest_first=False
-            )
-            embedding_model = OpenAIEmbedding()
-            token_counter = TokenCountingHandler(
-                tokenizer=tiktoken.encoding_for_model("gpt-3.5-turbo-instruct").encode,
-                verbose=False,
-            )
-            callback_manager = CallbackManager([token_counter])
-            service_context = ServiceContext.from_defaults(
-                embed_model=embedding_model, callback_manager=callback_manager
             )
             index = await self.loop.run_in_executor(
                 None, partial(self.index_discord, document, service_context)
@@ -888,7 +886,7 @@ class Index_handler:
 
             embedding_model = OpenAIEmbedding()
 
-            llm_predictor_mock = MockLLMPredictor(4096)
+            llm_predictor_mock = MockLLMPredictor()
             embedding_model_mock = MockEmbedding(1536)
 
             token_counter_mock = TokenCountingHandler(
@@ -925,34 +923,21 @@ class Index_handler:
                     "Doing this deep search would be prohibitively expensive. Please try a narrower search scope."
                 )
 
-            token_counter = TokenCountingHandler(
-                tokenizer=tiktoken.encoding_for_model("gpt-3.5-turbo").encode,
-                verbose=False,
-            )
-
-            callback_manager = CallbackManager([token_counter])
-
-            service_context = ServiceContext.from_defaults(
-                llm_predictor=llm_predictor,
-                embed_model=embedding_model,
-                callback_manager=callback_manager,
-            )
-
             tree_index = await self.loop.run_in_executor(
                 None,
                 partial(
                     GPTTreeIndex.from_documents,
                     documents=documents,
-                    service_context=service_context,
+                    service_context=self.service_context,
                     use_async=True,
                 ),
             )
 
             await self.usage_service.update_usage(
-                token_counter.total_llm_token_count, "turbo"
+                self.token_counter.total_llm_token_count, "turbo"
             )
             await self.usage_service.update_usage(
-                token_counter.total_embedding_token_count, "embedding"
+                self.token_counter.total_embedding_token_count, "embedding"
             )
 
             # Now we have a list of tree indexes, we can compose them
@@ -971,19 +956,6 @@ class Index_handler:
             documents = []
             for _index in index_objects:
                 documents.extend(await self.index_to_docs(_index))
-
-            embedding_model = OpenAIEmbedding()
-
-            token_counter = TokenCountingHandler(
-                tokenizer=tiktoken.encoding_for_model("gpt-3.5-turbo").encode,
-                verbose=False,
-            )
-
-            callback_manager = CallbackManager([token_counter])
-
-            service_context = ServiceContext.from_defaults(
-                embed_model=embedding_model, callback_manager=callback_manager
-            )
 
             simple_index = await self.loop.run_in_executor(
                 None,
@@ -1031,15 +1003,7 @@ class Index_handler:
             document = await self.load_data(
                 channel_ids=channel_ids, limit=message_limit, oldest_first=False
             )
-            embedding_model = OpenAIEmbedding()
-            token_counter = TokenCountingHandler(
-                tokenizer=tiktoken.encoding_for_model("gpt-3.5-turbo-instruct").encode,
-                verbose=False,
-            )
-            callback_manager = CallbackManager([token_counter])
-            service_context = ServiceContext.from_defaults(
-                embed_model=embedding_model, callback_manager=callback_manager
-            )
+
             index = await self.loop.run_in_executor(
                 None, partial(self.index_discord, document, service_context)
             )
@@ -1092,18 +1056,6 @@ class Index_handler:
         )
 
         try:
-            embedding_model = OpenAIEmbedding()
-            token_counter = TokenCountingHandler(
-                tokenizer=tiktoken.encoding_for_model(model).encode, verbose=False
-            )
-
-            callback_manager = CallbackManager([token_counter])
-            service_context = ServiceContext.from_defaults(
-                llm_predictor=llm_predictor,
-                embed_model=embedding_model,
-                callback_manager=callback_manager,
-            )
-
             token_counter.reset_counts()
             response = await self.loop.run_in_executor(
                 None,
@@ -1388,6 +1340,7 @@ class ComposeModal(discord.ui.View):
                     )
                     return False
                 except Exception as e:
+                    traceback.print_exc()
                     await interaction.followup.send(
                         embed=EmbedStatics.get_index_compose_failure_embed(
                             f"An error occurred while composing the indexes: {str(e)}"
