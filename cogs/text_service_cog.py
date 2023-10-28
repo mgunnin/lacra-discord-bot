@@ -273,15 +273,21 @@ class GPT3ComCon(discord.Cog, name="GPT3ComCon"):
 
         print("Syncing commands...")
 
-        await self.bot.sync_commands(
-            commands=None,
-            method="individual",
-            force=True,
-            guild_ids=ALLOWED_GUILDS,
-            register_guild_commands=True,
-            check_guilds=[],
-            delete_existing=True,
-        )
+        try:
+            await self.bot.sync_commands(
+                commands=None,
+                method="individual",
+                force=True,
+                guild_ids=ALLOWED_GUILDS,
+                register_guild_commands=True,
+                check_guilds=[],
+                delete_existing=True,
+            )
+        except:
+            traceback.print_exc()
+            print(
+                "There was a failure during command syncing. This might mean that the bot may not be in a guild that it expects to be in anymore, or it is in guilds without the guild ID being added to ALLOWED_GUILDS."
+            )
         print("Commands synced")
 
         # Start an inline async loop that runs every 10 seconds to save the conversation history to a pickle file
@@ -1124,14 +1130,14 @@ class GPT3ComCon(discord.Cog, name="GPT3ComCon"):
                     description=f"**Model**: {self.model.model if not model else model}",
                     color=0x808080,
                 )
-                message_embed.set_thumbnail(url="https://i.imgur.com/asA13vI.png")
+                message_embed.set_thumbnail(url="https://i.imgur.com/wpp4TIf.png")
                 footer_text = (
                     "Regular Chat"
                     if not image_understanding_model.get_is_usable()
                     else "Regular Chat, Multi-Modal"
                 )
                 message_embed.set_footer(
-                    text=footer_text, icon_url="https://i.imgur.com/asA13vI.png"
+                    text=footer_text, icon_url="https://i.imgur.com/wpp4TIf.png"
                 )
                 message_thread = await ctx.send(embed=message_embed)
                 thread = await message_thread.create_thread(

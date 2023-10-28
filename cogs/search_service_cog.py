@@ -37,6 +37,7 @@ from langchain.prompts import (
     HumanMessagePromptTemplate,
 )
 from langchain.requests import TextRequestsWrapper, Requests
+from langchain.schema import SystemMessage
 from llama_index import (
     GPTVectorStoreIndex,
     Document,
@@ -438,9 +439,9 @@ class SearchService(discord.Cog, name="SearchService"):
             description=f"The agent will visit and browse **{search_scope}** link(s) every time it needs to access the internet.\nCrawling is enabled, send the bot a link for it to access it!\nModel: {model}\n\nType `end` to stop the conversation",
             color=0xBA6093,
         )
-        message_embed.set_thumbnail(url="https://i.imgur.com/lt5AYJ9.png")
+        message_embed.set_thumbnail(url="https://i.imgur.com/sioynYZ.png")
         message_embed.set_footer(
-            text="Internet Chat", icon_url="https://i.imgur.com/lt5AYJ9.png"
+            text="Internet Chat", icon_url="https://i.imgur.com/sioynYZ.png"
         )
         message_thread = await ctx.send(embed=message_embed)
         thread = await message_thread.create_thread(
@@ -488,21 +489,24 @@ class SearchService(discord.Cog, name="SearchService"):
             traceback.print_exc()
             print("Wolfram tool not added to internet-connected conversation agent.")
 
-        memory = ConversationBufferMemory(
-            memory_key="chat_history", return_messages=True
-        )
+        memory = ConversationBufferMemory(memory_key="memory", return_messages=True)
+
+        agent_kwargs = {
+            "extra_prompt_messages": [MessagesPlaceholder(variable_name="memory")],
+            "system_message": SystemMessage(
+                content="You are a superpowered version of GPT-4 that is able to access the internet. You can use google search to browse the web, you can crawl the web to see the content of specific websites, and in some cases you can also use Wolfram Alpha to perform mathematical operations. Use all of these tools to your advantage."
+            ),
+        }
 
         llm = ChatOpenAI(model=model, temperature=0, openai_api_key=OPENAI_API_KEY)
 
         agent_chain = initialize_agent(
-            tools,
-            llm,
-            agent=AgentType.CHAT_CONVERSATIONAL_REACT_DESCRIPTION,
+            tools=tools,
+            llm=llm,
+            agent=AgentType.OPENAI_FUNCTIONS,
             verbose=True,
+            agent_kwargs=agent_kwargs,
             memory=memory,
-            max_execution_time=120,
-            max_iterations=4,
-            early_stopping_method="generate",
         )
 
         self.chat_agents[thread.id] = agent_chain
