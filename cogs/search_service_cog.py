@@ -103,6 +103,7 @@ def my_parse(self, text):
             )
 
         result = original_parse(self, text_without_triple_backticks)
+        result = original_parse(self, text_without_triple_backticks)
 
     return result
 
@@ -241,6 +242,7 @@ class CustomTextRequestWrapper(BaseModel):
                 query_engine = RetrieverQueryEngine(
                     retriever=retriever, response_synthesizer=response_synthesizer
                 )
+                return query_engine.query(original_query)
                 return query_engine.query(original_query)
         return text
 
@@ -412,6 +414,7 @@ class SearchService(discord.Cog, name="SearchService"):
                     color=0x808080,
                 )
                 if used_tools:
+                if used_tools:
                     response_embed.set_footer(
                         text="Used tools: " + ", ".join(used_tools)
                     )
@@ -435,9 +438,11 @@ class SearchService(discord.Cog, name="SearchService"):
         message_thread = await ctx.send(embed=message_embed)
         thread = await message_thread.create_thread(
             name=f"{ctx.user.name}'s internet-connected conversation with GPT",
+            name=f"{ctx.user.name}'s internet-connected conversation with GPT",
             auto_archive_duration=60,
         )
         await ctx.respond("Conversation started.")
+        print(f"The search scope is {str(search_scope)}.")
         print(f"The search scope is {str(search_scope)}.")
 
         # Make a new agent for this user to chat.
@@ -541,6 +546,8 @@ class SearchService(discord.Cog, name="SearchService"):
         ):
             await ctx.respond(
                 embed=EmbedStatics.get_search_failure_embed(
+                    "The search service is not enabled on this server."
+                )
                     "The search service is not enabled on this server."
                 )
             )

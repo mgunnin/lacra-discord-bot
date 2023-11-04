@@ -18,6 +18,7 @@ USER_INPUT_API_KEYS = EnvService.get_user_input_api_keys()
 USER_KEY_DB = EnvService.get_api_db()
 PRE_MODERATE = EnvService.get_premoderate()
 if GITHUB_TOKEN := EnvService.get_github_token():
+if GITHUB_TOKEN := EnvService.get_github_token():
     os.environ["GITHUB_TOKEN"] = GITHUB_TOKEN
 
 
@@ -352,6 +353,7 @@ class IndexService(discord.Cog, name="IndexService"):
             await self.index_handler.set_file_index(
                 ctx, file, user_api_key=user_api_key
             )
+        else:
         else:
             await self.index_handler.set_link_index(
                 ctx, link, user_api_key=user_api_key

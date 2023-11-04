@@ -540,7 +540,7 @@ class Index_handler:
         )
         message_thread = await ctx.send(embed=message_embed)
         thread = await message_thread.create_thread(
-            name=ctx.user.name + "'s data-connected conversation with GPT",
+            name=f"{ctx.user.name}'s data-connected conversation with GPT",
             auto_archive_duration=60,
         )
         await ctx.respond("Conversation started.")
@@ -568,10 +568,7 @@ class Index_handler:
         # Send each chunk as a message
         for count, chunk in enumerate(response_text, start=1):
             if not first:
-                page = discord.Embed(
-                    title=f"Index Query Results",
-                    description=chunk,
-                )
+                page = discord.Embed(title="Index Query Results", description=chunk)
                 first = True
             else:
                 page = discord.Embed(
@@ -593,17 +590,15 @@ class Index_handler:
             document = epub_loader.load_data(file_path)
         else:
             document = SimpleDirectoryReader(input_files=[file_path]).load_data()
-        index = GPTVectorStoreIndex.from_documents(
+        return GPTVectorStoreIndex.from_documents(
             document, service_context=service_context, use_async=True
         )
-        return index
 
     def index_gdoc(self, doc_id, service_context) -> GPTVectorStoreIndex:
         document = GoogleDocsReader().load_data(doc_id)
-        index = GPTVectorStoreIndex.from_documents(
+        return GPTVectorStoreIndex.from_documents(
             document, service_context=service_context, use_async=True
         )
-        return index
 
     def index_youtube_transcript(self, link, service_context):
         try:
@@ -625,12 +620,11 @@ class Index_handler:
         except Exception as e:
             raise ValueError(f"The youtube transcript couldn't be loaded: {e}")
 
-        index = GPTVectorStoreIndex.from_documents(
+        return GPTVectorStoreIndex.from_documents(
             documents,
             service_context=service_context,
             use_async=True,
         )
-        return index
 
     def index_github_repository(self, link, service_context):
         # Extract the "owner" and the "repo" name from the github link.
@@ -646,55 +640,44 @@ class Index_handler:
                 branch="master"
             )
 
-        index = GPTVectorStoreIndex.from_documents(
+        return GPTVectorStoreIndex.from_documents(
             documents,
             service_context=service_context,
             use_async=True,
         )
-        return index
 
     def index_load_file(self, file_path) -> [GPTVectorStoreIndex, ComposableGraph]:
         storage_context = StorageContext.from_defaults(persist_dir=file_path)
-        index = load_index_from_storage(storage_context)
-        return index
+        return load_index_from_storage(storage_context)
 
     def index_discord(self, document, service_context) -> GPTVectorStoreIndex:
-        index = GPTVectorStoreIndex.from_documents(
+        return GPTVectorStoreIndex.from_documents(
             document,
             service_context=service_context,
             use_async=True,
         )
-        return index
 
     async def index_pdf(self, url) -> list[Document]:
         # Download the PDF at the url and save it to a tempfile
         async with aiohttp.ClientSession() as session:
             async with session.get(url) as response:
-                if response.status == 200:
-                    data = await response.read()
-                    f = tempfile.NamedTemporaryFile(suffix=".pdf", delete=False)
-                    f.write(data)
-                    f.close()
-                else:
+                if response.status != 200:
                     return "An error occurred while downloading the PDF."
-        # Get the file path of this tempfile.NamedTemporaryFile
-        # Save this temp file to an actual file that we can put into something else to read it
-        documents = SimpleDirectoryReader(input_files=[f.name]).load_data()
-
-        # Delete the temporary file
-        return documents
+                data = await response.read()
+                f = tempfile.NamedTemporaryFile(suffix=".pdf", delete=False)
+                f.write(data)
+                f.close()
+        return SimpleDirectoryReader(input_files=[f.name]).load_data()
 
     async def index_webpage(self, url, service_context) -> GPTVectorStoreIndex:
         # First try to connect to the URL to see if we can even reach it.
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.get(url, timeout=5) as response:
-                    # Add another entry to links from all_links if the link is not already in it to compensate for the failed request
                     if response.status not in [200, 203, 202, 204]:
                         raise ValueError(
                             "Invalid URL or could not connect to the provided URL."
                         )
-                    else:
                         # Detect if the link is a PDF, if it is, we load it differently
                         if response.headers["Content-Type"] == "application/pdf":
                             documents = await self.index_pdf(url)
@@ -717,8 +700,7 @@ class Index_handler:
             website_extractor=DEFAULT_WEBSITE_EXTRACTOR
         ).load_data(urls=[url])
 
-        # index = GPTVectorStoreIndex(documents, embed_model=embed_model, use_async=True)
-        index = await self.loop.run_in_executor(
+        return await self.loop.run_in_executor(
             None,
             functools.partial(
                 GPTVectorStoreIndex.from_documents,
@@ -727,7 +709,6 @@ class Index_handler:
                 use_async=True,
             ),
         )
-        return index
 
     def reset_indexes(self, user_id):
         self.index_storage[user_id].reset_indexes(user_id)
@@ -799,9 +780,7 @@ class Index_handler:
 
             file_name = file.filename
             self.index_storage[ctx.user.id].add_index(index, ctx.user.id, file_name)
-            await response.edit(
-                embed=EmbedStatics.get_index_set_success_embed(str(price))
-            )
+            await response.edit(embed=EmbedStatics.get_index_set_success_embed(price))
         except Exception as e:
             await ctx.channel.send(
                 embed=EmbedStatics.get_index_set_failure_embed(str(e))
@@ -837,8 +816,7 @@ class Index_handler:
                 traceback.print_exc()
                 await response.edit(
                     embed=EmbedStatics.get_index_set_failure_embed(
-                        "Invalid URL or could not connect to the provided URL. "
-                        + str(e)
+                        f"Invalid URL or could not connect to the provided URL. {str(e)}"
                     )
                 )
                 return
@@ -884,11 +862,6 @@ class Index_handler:
             )
 
             self.index_storage[ctx.user.id].add_index(index, ctx.user.id, file_name)
-
-        except ValueError as e:
-            await response.edit(embed=EmbedStatics.get_index_set_failure_embed(str(e)))
-            traceback.print_exc()
-            return
 
         except Exception as e:
             await response.edit(embed=EmbedStatics.get_index_set_failure_embed(str(e)))
@@ -1187,7 +1160,7 @@ class Index_handler:
             embedding_model_mock = MockEmbedding(1536)
 
             token_counter_mock = TokenCountingHandler(
-                tokenizer=tiktoken.encoding_for_model("text-davinci-003").encode,
+                tokenizer=tiktoken.encoding_for_model("gpt-3.5-turbo-instruct").encode,
                 verbose=False,
             )
 
@@ -1296,9 +1269,7 @@ class Index_handler:
         openai.api_key = os.environ["OPENAI_API_KEY"]
 
         try:
-            channel_ids: List[int] = []
-            for c in ctx.guild.text_channels:
-                channel_ids.append(c.id)
+            channel_ids: List[int] = [c.id for c in ctx.guild.text_channels]
             document = await self.load_data(
                 channel_ids=channel_ids, limit=message_limit, oldest_first=False
             )
@@ -1433,15 +1404,9 @@ class Index_handler:
                     f"Channel {channel_id} is not a text channel. "
                     "Only text channels are supported for now."
                 )
-            # thread_dict maps thread_id to thread
-            thread_dict = {}
-            for thread in channel.threads:
-                thread_dict[thread.id] = thread
-
+            thread_dict = {thread.id: thread for thread in channel.threads}
             async for msg in channel.history(limit=limit, oldest_first=oldest_first):
-                if msg.author.bot:
-                    pass
-                else:
+                if not msg.author.bot:
                     messages.append(msg)
                     if msg.id in thread_dict:
                         thread = thread_dict[msg.id]
@@ -1450,7 +1415,7 @@ class Index_handler:
                         ):
                             messages.append(thread_msg)
         except Exception as e:
-            print("Encountered error: " + str(e))
+            print(f"Encountered error: {str(e)}")
 
         channel = self.bot.get_channel(channel_id)
         msg_txt_list = [
@@ -1526,28 +1491,24 @@ class ComposeModal(discord.ui.View):
         self.deep = deep
 
         # Get all the indexes for the user
-        self.indexes = [
-            file
-            for file in os.listdir(
-                EnvService.find_shared_file(f"indexes/{str(user_id)}/")
-            )
-        ]
+        self.indexes = list(
+            os.listdir(EnvService.find_shared_file(f"indexes/{str(user_id)}/"))
+        )
 
         if index_cog.index_storage[user_id].has_search_indexes(user_id):
             self.indexes.extend(
-                [
-                    file
-                    for file in os.listdir(
+                list(
+                    os.listdir(
                         EnvService.find_shared_file(f"indexes/{str(user_id)}_search/")
                     )
-                ]
+                )
             )
         print("Found the indexes, they are ", self.indexes)
 
         # Map everything into the short to long cache
         for index in self.indexes:
             if len(index) > 93:
-                index_name = index[:93] + "-" + str(random.randint(0000, 9999))
+                index_name = f"{index[:93]}-{random.randint(0, 9999)}"
                 SHORT_TO_LONG_CACHE[index_name] = index
             else:
                 SHORT_TO_LONG_CACHE[index[:99]] = index
@@ -1564,11 +1525,12 @@ class ComposeModal(discord.ui.View):
             placeholder="Select index(es) to compose",
             options=[
                 discord.SelectOption(
-                    label=LONG_TO_SHORT_CACHE[index], value=LONG_TO_SHORT_CACHE[index]
+                    label=LONG_TO_SHORT_CACHE[index],
+                    value=LONG_TO_SHORT_CACHE[index],
                 )
                 for index in self.indexes
-            ][0:25],
-            max_values=len(self.indexes) if len(self.indexes) < 25 else 25,
+            ][:25],
+            max_values=min(len(self.indexes), 25),
             min_values=1,
         )
         # Add the select menu to the modal
@@ -1624,17 +1586,7 @@ class ComposeModal(discord.ui.View):
                 select.values[0] for select in self.extra_index_selects
             ]
 
-            # Remap them from the SHORT_TO_LONG_CACHE
-            indexes = [SHORT_TO_LONG_CACHE[index] for index in indexes]
-
-            if len(indexes) < 1:
-                await interaction.response.send_message(
-                    embed=EmbedStatics.get_index_compose_failure_embed(
-                        "You must select at least 1 index"
-                    ),
-                    ephemeral=True,
-                )
-            else:
+            if indexes := [SHORT_TO_LONG_CACHE[index] for index in indexes]:
                 composing_message = await interaction.response.send_message(
                     embed=EmbedStatics.get_index_compose_progress_embed(),
                     ephemeral=True,
@@ -1645,10 +1597,10 @@ class ComposeModal(discord.ui.View):
                         self.user_id,
                         indexes,
                         self.name,
-                        False
-                        if not self.deep_select.values
-                        or self.deep_select.values[0] == "no"
-                        else True,
+                        bool(
+                            self.deep_select.values
+                            and self.deep_select.values[0] != "no"
+                        ),
                     )
                 except ValueError as e:
                     await interaction.followup.send(
@@ -1659,7 +1611,7 @@ class ComposeModal(discord.ui.View):
                     traceback.print_exc()
                     await interaction.followup.send(
                         embed=EmbedStatics.get_index_compose_failure_embed(
-                            "An error occurred while composing the indexes: " + str(e)
+                            f"An error occurred while composing the indexes: {str(e)}"
                         ),
                         ephemeral=True,
                         delete_after=180,
@@ -1675,7 +1627,7 @@ class ComposeModal(discord.ui.View):
                 # Try to direct message the user that their composed index is ready
                 try:
                     await self.index_cog.bot.get_user(self.user_id).send(
-                        f"Your composed index is ready! You can load it with /index load now in the server."
+                        "Your composed index is ready! You can load it with /index load now in the server."
                     )
                 except discord.Forbidden:
                     pass
@@ -1686,5 +1638,12 @@ class ComposeModal(discord.ui.View):
 
                 except:
                     traceback.print_exc()
+            else:
+                await interaction.response.send_message(
+                    embed=EmbedStatics.get_index_compose_failure_embed(
+                        "You must select at least 1 index"
+                    ),
+                    ephemeral=True,
+                )
         else:
             await interaction.response.defer(ephemeral=True)
