@@ -122,11 +122,9 @@ class ImageService:
                 )
             )
 
-            image_service_cog.converser_cog.users_to_interactions[user_id] = []
-            image_service_cog.converser_cog.users_to_interactions[user_id].append(
+            image_service_cog.converser_cog.users_to_interactions[user_id] = [
                 result_message.id
-            )
-
+            ]
             # Get the actual result message object
             if from_context:
                 result_message = await ctx.fetch_message(result_message.id)
@@ -144,74 +142,74 @@ class ImageService:
                 style=style,
             )
 
-        else:
-            if not vary:  # Editing case
-                message = await response_message.edit(
+        elif vary:  # Varying case
+            if not draw_from_optimizer:
+                result_message = await response_message.edit_original_response(
+                    content="Image variation completed!",
                     embed=embed,
                     file=file,
                 )
-                await message.edit(
+                await result_message.edit(
                     view=SaveView(
                         ctx,
                         image_urls,
                         image_service_cog,
                         image_service_cog.converser_cog,
-                        message,
+                        result_message,
+                        True,
                         custom_api_key=custom_api_key,
                         dalle_3=dalle_3,
                     )
                 )
-            else:  # Varying case
-                if not draw_from_optimizer:
-                    result_message = await response_message.edit_original_response(
-                        content="Image variation completed!",
-                        embed=embed,
-                        file=file,
-                    )
-                    await result_message.edit(
-                        view=SaveView(
-                            ctx,
-                            image_urls,
-                            image_service_cog,
-                            image_service_cog.converser_cog,
-                            result_message,
-                            True,
-                            custom_api_key=custom_api_key,
-                        )
-                    )
 
-                else:
-                    result_message = await response_message.edit_original_response(
-                        content="I've drawn the optimized prompt!",
-                        embed=embed,
-                        file=file,
-                    )
-                    await result_message.edit(
-                        view=SaveView(
-                            ctx,
-                            image_urls,
-                            image_service_cog,
-                            image_service_cog.converser_cog,
-                            result_message,
-                            custom_api_key=custom_api_key,
-                        )
-                    )
-
-                    image_service_cog.redo_users[user_id] = RedoUser(
-                        prompt=prompt,
-                        message=ctx,
-                        ctx=ctx,
-                        response=result_message,
-                        instruction=None,
-                        paginator=None,
-                    )
-
-                image_service_cog.converser_cog.users_to_interactions[user_id].append(
-                    response_message.id
+            else:
+                result_message = await response_message.edit_original_response(
+                    content="I've drawn the optimized prompt!",
+                    embed=embed,
+                    file=file,
                 )
-                image_service_cog.converser_cog.users_to_interactions[user_id].append(
-                    result_message.id
+                await result_message.edit(
+                    view=SaveView(
+                        ctx,
+                        image_urls,
+                        image_service_cog,
+                        image_service_cog.converser_cog,
+                        result_message,
+                        custom_api_key=custom_api_key,
+                    )
                 )
+
+                image_service_cog.redo_users[user_id] = RedoUser(
+                    prompt=prompt,
+                    message=ctx,
+                    ctx=ctx,
+                    response=result_message,
+                    instruction=None,
+                    paginator=None,
+                )
+
+            image_service_cog.converser_cog.users_to_interactions[user_id].append(
+                response_message.id
+            )
+            image_service_cog.converser_cog.users_to_interactions[user_id].append(
+                result_message.id
+            )
+
+        else:  # Editing case
+            message = await response_message.edit(
+                embed=embed,
+                file=file,
+            )
+            await message.edit(
+                view=SaveView(
+                    ctx,
+                    image_urls,
+                    image_service_cog,
+                    image_service_cog.converser_cog,
+                    message,
+                    custom_api_key=custom_api_key,
+                )
+            )
 
 
 class SaveView(discord.ui.View):
@@ -286,8 +284,8 @@ class VaryButton(discord.ui.Button):
     def __init__(self, number, image_url, cog, converser_cog, custom_api_key):
         super().__init__(
             style=discord.ButtonStyle.blurple,
-            label="Vary " + str(number),
-            custom_id="vary_button" + str(random.randint(10000000, 99999999)),
+            label=f"Vary {str(number)}",
+            custom_id=f"vary_button{random.randint(10000000, 99999999)}",
         )
         self.number = number
         self.image_url = image_url
@@ -319,7 +317,7 @@ class VaryButton(discord.ui.Button):
 
         if user_id in self.cog.redo_users:
             response_message = await interaction.response.send_message(
-                content="Varying image number " + str(self.number) + "..."
+                content=f"Varying image number {str(self.number)}..."
             )
             self.converser_cog.users_to_interactions[user_id].append(
                 response_message.message.id
@@ -346,8 +344,8 @@ class SaveButton(discord.ui.Button["SaveView"]):
     def __init__(self, number: int, image_url: str):
         super().__init__(
             style=discord.ButtonStyle.gray,
-            label="Save " + str(number),
-            custom_id="save_button" + str(random.randint(1000000, 9999999)),
+            label=f"Save {number}",
+            custom_id=f"save_button{random.randint(1000000, 9999999)}",
         )
         self.number = number
         self.image_url = image_url

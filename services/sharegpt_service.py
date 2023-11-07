@@ -35,12 +35,11 @@ class ShareGPTService:
 
         async with aiohttp.ClientSession() as session:
             async with session.post(
-                self.API_URL, data=conversation, headers=headers
-            ) as response:
-                if response.status == 200:
-                    response_json = await response.json()
-                    return response_json["id"]
-                else:
+                        self.API_URL, data=conversation, headers=headers
+                    ) as response:
+                if response.status != 200:
                     raise ValueError(
                         f"ShareGPT returned an invalid response: {await response.text()}"
                     )
+                response_json = await response.json()
+                return response_json["id"]

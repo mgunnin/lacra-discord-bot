@@ -49,7 +49,7 @@ class Override:
 
 class Models:
     # Text models
-    DAVINCI = "text-davinci-003"
+    DAVINCI = "gpt-3.5-turbo-instruct"
     CURIE = "text-curie-001"
 
     # Embedding models
@@ -652,24 +652,20 @@ class Model:
         self._prompt_min_length = value
         SETTINGS_DB["prompt_min_length"] = value
 
-    def backoff_handler_http(details):
+    def backoff_handler_http(self):
         print(
-            f"Backing off {details['wait']:0.1f} seconds after {details['tries']} tries calling function {details['target']} | "
-            f"{details['exception'].status}: {details['exception'].message}"
+            f"Backing off {self['wait']:0.1f} seconds after {self['tries']} tries calling function {self['target']} | {self['exception'].status}: {self['exception'].message}"
         )
 
-    def backoff_handler_request(details):
+    def backoff_handler_request(self):
         print(
-            f"Backing off {details['wait']:0.1f} seconds after {details['tries']} tries calling function {details['target']} | "
-            f"{details['exception'].args[0]}"
+            f"Backing off {self['wait']:0.1f} seconds after {self['tries']} tries calling function {self['target']} | {self['exception'].args[0]}"
         )
 
     async def valid_text_request(self, response, model=None):
         try:
-            tokens_used = int(response["usage"]["total_tokens"])
-            if model and model in Models.EDIT_MODELS:
-                pass
-            else:
+            if not model or model not in Models.EDIT_MODELS:
+                tokens_used = int(response["usage"]["total_tokens"])
                 await self.usage_service.update_usage(
                     tokens_used, await self.usage_service.get_cost_name(model)
                 )
@@ -693,8 +689,8 @@ class Model:
     )
     async def send_embedding_request(self, text, custom_api_key=None):
         async with aiohttp.ClientSession(
-            raise_for_status=True, timeout=aiohttp.ClientTimeout(total=300)
-        ) as session:
+                raise_for_status=True, timeout=aiohttp.ClientTimeout(total=300)
+            ) as session:
             payload = {
                 "model": Models.EMBEDDINGS,
                 "input": text,
@@ -703,7 +699,7 @@ class Model:
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {self.openai_key if not custom_api_key else custom_api_key}",
             }
-            self.use_org = True if "true" in str(self.use_org).lower() else False
+            self.use_org = "true" in str(self.use_org).lower()
             if self.use_org:
                 if self.openai_organization:
                     headers["OpenAI-Organization"] = self.openai_organization
@@ -741,8 +737,8 @@ class Model:
         print(f"Overrides -> temp:{temp_override}, top_p:{top_p_override}")
 
         async with aiohttp.ClientSession(
-            raise_for_status=False, timeout=aiohttp.ClientTimeout(total=300)
-        ) as session:
+                raise_for_status=False, timeout=aiohttp.ClientTimeout(total=300)
+            ) as session:
             payload = {
                 "model": Models.EDIT,
                 "input": "" if text is None else text,
@@ -754,7 +750,7 @@ class Model:
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {self.openai_key if not custom_api_key else custom_api_key}",
             }
-            self.use_org = True if "true" in str(self.use_org).lower() else False
+            self.use_org = "true" in str(self.use_org).lower()
             if self.use_org:
                 if self.openai_organization:
                     headers["OpenAI-Organization"] = self.openai_organization
@@ -800,15 +796,10 @@ class Model:
         """
         Sends a summary request to the OpenAI API
         """
-        summary_request_text = []
-        summary_request_text.append(
-            "The following is a conversation instruction set and a conversation between two people, a <username>, and GPTie."
-            " Firstly, determine the <username>'s name from the conversation history, then summarize the conversation."
-            " Do not summarize the instructions for GPTie, only the conversation. Summarize the conversation in a detailed fashion. If <username> mentioned"
-            " their name, be sure to mention it in the summary. Pay close attention to things the <username> has told you, such as personal details."
-        )
-        summary_request_text.append(prompt + "\nDetailed summary of conversation: \n")
-
+        summary_request_text = [
+            "The following is a conversation instruction set and a conversation between two people, a <username>, and GPTie. Firstly, determine the <username>'s name from the conversation history, then summarize the conversation. Do not summarize the instructions for GPTie, only the conversation. Summarize the conversation in a detailed fashion. If <username> mentioned their name, be sure to mention it in the summary. Pay close attention to things the <username> has told you, such as personal details.",
+            prompt + "\nDetailed summary of conversation: \n",
+        ]
         summary_request_text = "".join(summary_request_text)
 
         messages = []
@@ -833,7 +824,7 @@ class Model:
             headers = {
                 "Authorization": f"Bearer {self.openai_key if not custom_api_key else custom_api_key}"
             }
-            self.use_org = True if "true" in str(self.use_org).lower() else False
+            self.use_org = "true" in str(self.use_org).lower()
             if self.use_org:
                 if self.openai_organization:
                     headers["OpenAI-Organization"] = self.openai_organization
@@ -888,7 +879,7 @@ class Model:
                 "max_tokens": max_tokens,
             }
             headers = {"Authorization": f"Bearer {self.openai_key}"}
-            self.use_org = True if "true" in str(self.use_org).lower() else False
+            self.use_org = "true" in str(self.use_org).lower()
             if self.use_org:
                 if self.openai_organization:
                     headers["OpenAI-Organization"] = self.openai_organization
@@ -1018,8 +1009,8 @@ class Model:
 
         print(f"Messages -> {messages}")
         async with aiohttp.ClientSession(
-            raise_for_status=False, timeout=aiohttp.ClientTimeout(total=300)
-        ) as session:
+                raise_for_status=False, timeout=aiohttp.ClientTimeout(total=300)
+            ) as session:
             payload = {
                 "model": model_selection,
                 "messages": messages,
@@ -1041,7 +1032,7 @@ class Model:
             headers = {
                 "Authorization": f"Bearer {self.openai_key if not custom_api_key else custom_api_key}"
             }
-            self.use_org = True if "true" in str(self.use_org).lower() else False
+            self.use_org = "true" in str(self.use_org).lower()
             if self.use_org:
                 if self.openai_organization:
                     headers["OpenAI-Organization"] = self.openai_organization
@@ -1140,13 +1131,14 @@ class Model:
 
         messages = [{"role": "user", "content": prompt}]
         # modify prompt if a system instruction is set
-        if system_instruction and is_chatgpt_request:
-            messages = [
-                {"role": "system", "content": system_instruction},
-                {"role": "user", "content": prompt},
-            ]
-        elif system_instruction:
-            prompt = f"{system_instruction} {prompt}"
+        if system_instruction:
+            if is_chatgpt_request:
+                messages = [
+                    {"role": "system", "content": system_instruction},
+                    {"role": "user", "content": prompt},
+                ]
+            else:
+                prompt = f"{system_instruction} {prompt}"
 
         if system_instruction:
             print(f"The instruction added to the prompt will be {system_instruction}")
@@ -1158,8 +1150,8 @@ class Model:
         # Non-ChatGPT simple completion models.
         if not is_chatgpt_request:
             async with aiohttp.ClientSession(
-                raise_for_status=False, timeout=aiohttp.ClientTimeout(total=300)
-            ) as session:
+                        raise_for_status=False, timeout=aiohttp.ClientTimeout(total=300)
+                    ) as session:
                 payload = {
                     "model": self.model if model is None else model,
                     "prompt": prompt,
@@ -1184,7 +1176,7 @@ class Model:
                 headers = {
                     "Authorization": f"Bearer {self.openai_key if not custom_api_key else custom_api_key}"
                 }
-                self.use_org = True if "true" in str(self.use_org).lower() else False
+                self.use_org = "true" in str(self.use_org).lower()
                 if self.use_org:
                     if self.openai_organization:
                         headers["OpenAI-Organization"] = self.openai_organization
@@ -1205,8 +1197,8 @@ class Model:
                     return response
         else:  # ChatGPT/GPT4 Simple completion
             async with aiohttp.ClientSession(
-                raise_for_status=False, timeout=aiohttp.ClientTimeout(total=300)
-            ) as session:
+                        raise_for_status=False, timeout=aiohttp.ClientTimeout(total=300)
+                    ) as session:
                 payload = {
                     "model": self.model if not model else model,
                     "messages": messages,
@@ -1225,7 +1217,7 @@ class Model:
                 headers = {
                     "Authorization": f"Bearer {self.openai_key if not custom_api_key else custom_api_key}"
                 }
-                self.use_org = True if "true" in str(self.use_org).lower() else False
+                self.use_org = "true" in str(self.use_org).lower()
                 if self.use_org:
                     if self.openai_organization:
                         headers["OpenAI-Organization"] = self.openai_organization

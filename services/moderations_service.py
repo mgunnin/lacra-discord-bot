@@ -160,12 +160,10 @@ class Moderation:
         response = await Moderation.simple_moderate(text)
         print(response)
         flagged = (
-            True
-            if Moderation.determine_moderation_result(
+            Moderation.determine_moderation_result(
                 text, response, pre_mod_set, pre_mod_set
             )
             == ModerationResult.DELETE
-            else False
         )
 
         if flagged:
@@ -231,9 +229,7 @@ class Moderation:
 
         if delete_result:
             return ModerationResult.DELETE
-        if warn_result:
-            return ModerationResult.WARN
-        return ModerationResult.NONE
+        return ModerationResult.WARN if warn_result else ModerationResult.NONE
 
     # This function will be called by the bot to process the message queue
     @staticmethod
@@ -482,7 +478,7 @@ class TimeoutUserButton(discord.ui.Button["ModerationAdminView"]):
         super().__init__(
             style=discord.ButtonStyle.danger,
             label=f"Timeout {hours}h",
-            custom_id="timeout_button" + str(random.randint(100000, 999999)),
+            custom_id=f"timeout_button{random.randint(100000, 999999)}",
         )
         self.message = message
         self.moderation_message = moderation_message

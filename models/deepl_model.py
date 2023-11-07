@@ -37,10 +37,9 @@ class TranslationModel:
     def __init__(self):
         self.deepl_token = os.getenv("DEEPL_TOKEN")
 
-    def backoff_handler(details):
+    def backoff_handler(self):
         print(
-            f"Backing off {details['wait']:0.1f} seconds after {details['tries']} tries calling function {details['target']} | "
-            f"{details['exception'].status}: {details['exception'].message}"
+            f"Backing off {self['wait']:0.1f} seconds after {self['tries']} tries calling function {self['target']} | {self['exception'].status}: {self['exception'].message}"
         )
 
     @backoff.on_exception(

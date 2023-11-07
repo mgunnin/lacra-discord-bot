@@ -40,11 +40,7 @@ __version__ = "12.1.2"
 PID_FILE = Path("bot.pid")
 PROCESS = None
 
-if sys.platform == "win32":
-    separator = "\\"
-else:
-    separator = "/"
-
+separator = "\\" if sys.platform == "win32" else "/"
 #
 # The pinecone service is used to store and retrieve conversation embeddings.
 #
@@ -115,9 +111,7 @@ async def on_ready():  # I can make self optional by
 async def on_application_command_error(
     ctx: discord.ApplicationContext, error: discord.DiscordException
 ):
-    if isinstance(error, discord.CheckFailure):
-        pass
-    else:
+    if not isinstance(error, discord.CheckFailure):
         raise error
 
 
@@ -292,7 +286,7 @@ def init():
         print("Caught keyboard interrupt, killing and removing PID")
     except Exception as e:
         traceback.print_exc()
-        print(str(e))
+        print(e)
         print("Removing PID file")
     finally:
         cleanup_pid_file(None, None)
