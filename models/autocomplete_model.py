@@ -30,7 +30,9 @@ class Settings_autocompleter:
             if parameter.startswith(ctx.value.lower())
         ][:25]
 
-    async def get_value(self):    # Behaves a bit weird if you go back and edit the parameter without typing in a new command
+    async def get_value(
+        self,
+    ):  # Behaves a bit weird if you go back and edit the parameter without typing in a new command
         """gets valid values for the value option"""
         values = {
             "max_conversation_length": [
@@ -87,9 +89,7 @@ class Settings_autocompleter:
     async def get_models(self):
         """Gets all models"""
         return [
-            value
-            for value in Models.TEXT_MODELS
-            if value.startswith(ctx.value.lower())
+            value for value in Models.TEXT_MODELS if value.startswith(ctx.value.lower())
         ]
 
     async def get_index_and_search_models(self):
@@ -99,12 +99,21 @@ class Settings_autocompleter:
     async def get_converse_models(self):
         """Gets all models"""
         return [
-            value
-            for value in Models.TEXT_MODELS
-            if value.startswith(ctx.value.lower())
+            value for value in Models.TEXT_MODELS if value.startswith(ctx.value.lower())
         ]
 
-    async def get_value_moderations(self):    # Behaves a bit weird if you go back and edit the parameter without typing in a new command
+    async def get_dalle3_image_qualities(ctx: discord.AutocompleteContext):
+        return ["hd", "standard"]
+
+    async def get_dalle3_image_sizes(ctx: discord.AutocompleteContext):
+        return ["1024x1024", "1792x1024", "1024x1792"]
+
+    async def get_dalle3_image_styles(ctx: discord.AutocompleteContext):
+        return ["natural", "vivid"]
+
+    async def get_value_moderations(
+        ctx: discord.AutocompleteContext,
+    ):  # Behaves a bit weird if you go back and edit the parameter without typing in a new command
         """gets valid values for the type option"""
         return [
             value

@@ -16,22 +16,19 @@ from typing import List, Optional, cast
 from pathlib import Path
 from datetime import date
 
-from discord import InteractionResponse, Interaction
+from discord import Interaction
 from discord.ext import pages
-from langchain import OpenAI
 from langchain.agents import initialize_agent, AgentType
 from langchain.chat_models import ChatOpenAI
-from langchain.llms import OpenAIChat
-from langchain.memory import ConversationBufferMemory, ConversationSummaryBufferMemory
+from langchain.memory import ConversationSummaryBufferMemory
 from langchain.prompts import MessagesPlaceholder
 from langchain.schema import SystemMessage
 from langchain.tools import Tool
 from llama_index.callbacks import CallbackManager, TokenCountingHandler
 from llama_index.evaluation.guideline import DEFAULT_GUIDELINES, GuidelineEvaluator
-from llama_index.indices.query.base import BaseQueryEngine
+from llama_index.llms import OpenAI
 from llama_index.node_parser import SimpleNodeParser
 from llama_index.response_synthesizers import ResponseMode
-from llama_index.schema import NodeRelationship
 from llama_index.indices.query.query_transform import StepDecomposeQueryTransform
 from llama_index.langchain_helpers.agents import (
     IndexToolConfig,
@@ -488,11 +485,13 @@ class Index_handler:
         llm = ChatOpenAI(model=model, temperature=0)
         llm_predictor = LLMPredictor(llm=ChatOpenAI(temperature=0, model_name=model))
 
+        max_token_limit = 29000 if "gpt-4" in model else 7500
+
         memory = ConversationSummaryBufferMemory(
             memory_key="memory",
             return_messages=True,
             llm=llm,
-            max_token_limit=29000 if "gpt-4" in model else 7500,
+            max_token_limit=100000 if "preview" in model else max_token_limit,
         )
 
         agent_kwargs = {
@@ -505,7 +504,7 @@ class Index_handler:
                 "to the data at the link by the time you respond. When using tools, the input should be "
                 "clearly created based on the request of the user. For example, if a user uploads an invoice "
                 "and asks how many usage hours of X was present in the invoice, a good query is 'X hours'. "
-                "Avoid using single word queries unless the request is very simple."
+                "Avoid using single word queries unless the request is very simple. You can query multiple times to break down complex requests and retrieve more information."
             ),
         }
 
@@ -894,7 +893,7 @@ class Index_handler:
         )
 
         retry_guideline_query_engine = RetryGuidelineQueryEngine(
-            engine, guideline_eval, resynthesize_query=True
+            engine, guideline_eval, resynthesize_query=True, max_retries=2
         )
 
         return retry_guideline_query_engine
@@ -966,6 +965,7 @@ class Index_handler:
                     ].agent_kwargs,
                     memory=self.index_chat_chains[index_chat_ctx.channel.id].memory,
                     handle_parsing_errors="Check your output and make sure it conforms!",
+                    max_iterations=5,
                 )
 
                 index_chat_data = IndexChatData(
@@ -1001,7 +1001,7 @@ class Index_handler:
         response = await ctx.respond(embed=EmbedStatics.build_index_progress_embed())
         try:
             # Check if the link contains youtube in it
-            index = await self.index_link(link)
+            index, _ = await self.index_link(link)
 
             await self.usage_service.update_usage(
                 token_counter.total_embedding_token_count, "embedding"
